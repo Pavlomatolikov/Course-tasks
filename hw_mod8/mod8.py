@@ -26,4 +26,4 @@ def get_birthdays_per_week(users):
             print(f"{key}:", ", ".join(result[key]))
 
 
-print(get_birthdays_per_week(user_list))
+# print(get_birthdays_per_week(user_list))
