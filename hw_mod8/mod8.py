@@ -2,9 +2,9 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from locale import currency
 
-"""user_list = [{'name': 'John', 'birthday': datetime(
-    year=2012, month=9, day=17)}, {'name': 'John', 'birthday': datetime(
-        year=2012, month=9, day=17)}]"""
+# user_list = [{'name': 'John', 'birthday': datetime(
+#     year=2012, month=9, day=17)}, {'name': 'John', 'birthday': datetime(
+#         year=2012, month=9, day=17)}]
 
 
 def get_birthdays_per_week(users):
@@ -20,9 +20,10 @@ def get_birthdays_per_week(users):
         delta = i['birthday'].date().replace(year=current_year) - today
         if birthday.isocalendar().week == current_week_number and birthday.weekday() not in (5, 6) and delta.days >= 0:
             result[day_name].append(i['name'])
-            print(result)
         elif birthday.isocalendar().week - current_week_number == -1 and birthday.weekday() in (5, 6) and today.weekday() == 0:
             result['Passed ' + day_name].append(i['name'])
-            print(result)
         for key in result:
             print(f"{key}:", ", ".join(result[key]))
+
+
+print(get_birthdays_per_week(user_list))
