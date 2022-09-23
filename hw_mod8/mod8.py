@@ -24,4 +24,5 @@ def get_birthdays_per_week(users):
         print(f"{key}:", ", ".join(result[key]))
 
 
-get_birthdays_per_week(user_list)
+if __name__ == '__main__':
+    get_birthdays_per_week(user_list)
