@@ -1,25 +1,25 @@
 import re
 import pickle
+import sys
 
 
 def input_error(func):
     def inner(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except (AttributeError, TypeError):
-            print(
-                'At least one of the following commands should be entered: ')
-            for key in OPERATIONS:
-                print(key)
-            return None
         except KeyError as param:
-            print(
-                f"Enter also contact {param} please for {kwargs['command']} command")
+            return f"Enter also contact {param} please for this command"
+        except ValueError as e:
+            return e.args[0]
+        except Exception as e:
+            write_contact_list()
+            return e.args
     return inner
 
 
+@input_error
 def greetings(**kwargs):
-    print('How can I help you?')
+    return 'How can I help you?'
 
 
 @input_error
@@ -28,39 +28,52 @@ def add_contact(**kwargs):
     phone = kwargs['phone']
     if not contact_list.get(name):
         contact_list[name] = phone
+        return f'Phone {phone} was added for {name}'
     else:
         while True:
             raw_answer = input(
                 f"Contact {name} already exists with phone {contact_list[kwargs['name']]}. Do you want to overwrite? Y/N: ")
             match_command = re.search(r'(?i)\by|yes|n|no\b', raw_answer)
             if match_command.group() in ('y', 'yes'):
-                # contact_list[name] = phone
-                change_phone(name=name, phone=phone)
-                break
+                return change_phone(name=name, phone=phone)
             elif match_command.group() in ('n', 'no'):
                 name = input('Please enter new name: ')
-                add_contact(name=name, phone=phone)
-                break
+                return add_contact(name=name, phone=phone)
 
 
-# @input_error
+@input_error
 def change_phone(**kwargs):
     name = kwargs['name']
-    phone = kwargs['phone']
-    if contact_list[name]:
+    if contact_list.get(name):
+        phone = kwargs['phone']
         contact_list[name] = phone
+        return f"{name}'s phone was changed to {phone}"
+    else:
+        raise ValueError("Such conatact is absent in the contact list")
 
 
-def show_phone():
-    pass
+@input_error
+def show_phone(**kwargs):
+    name = kwargs['name']
+    if contact_list.get(name):
+        return f"{name} has {contact_list[name]} phone number"
+    else:
+        raise ValueError("Such conatact is absent in the contact list")
 
 
-def show_contact_list():
-    pass
+@input_error
+def show_contact_list(**kwargs):
+    return '\n'.join([f'{name} {telephone}' for name, telephone in sorted(contact_list.items())])
 
 
-def parting():
-    pass
+@input_error
+def parting(**kwargs):
+    return "Good bye!"
+
+
+@input_error
+def empty_input(**kwargs):
+    return f'At least one of the following commands should be entered: {", ".join(OPERATIONS.keys())}'
 
 
 OPERATIONS = {
@@ -69,49 +82,52 @@ OPERATIONS = {
     'change': change_phone,
     'phone': show_phone,
     'show all': show_contact_list,
-    'good bye': parting
+    'good bye': parting,
+    'close': parting,
+    'exit': parting
 }
 contact_list = {}  # name: phone
 
 
-""""hello", отвечает в консоль "How can I help you?"
-"add ...". По этой команде бот сохраняет в памяти (в словаре например) новый контакт. Вместо ... пользователь вводит имя и номер телефона, обязательно через пробел.
-"change ..." По этой команде бот сохраняет в памяти новый номер телефона для существующего контакта. Вместо ... пользователь вводит имя и номер телефона, обязательно через пробел.
-"phone ...." По этой команде бот выводит в консоль номер телефона для указанного контакта. Вместо ... пользователь вводит имя контакта, чей номер нужно показать.
-"show all". По этой команде бот выводит все сохраненные контакты с номерами телефонов в консоль.
-"good bye", "close", "exit" по любой из этих команд бот завершает свою роботу после того, как выведет в консоль "Good bye!"."""
-
-
 def main():
+    read_contact_list()
     while True:
-        try:
-            handler(**input_parser(
-                input("Please enter a command with parameters: ")))
-            # print(contact_list)
-        except ZeroDivisionError:  # (AttributeError, TypeError):
-            print("Let's try again.")
-            continue
-    # read_contact_list()
-    # print(contact_list)
-    # write_contact_list()
+        result = handler(
+            **input_parser(
+                input("Please enter a command with parameters: ")
+            )
+        )
+        print(result)
+        if result == "Good bye!":
+            write_contact_list()
+            break
 
 
 @input_error
 def input_parser(user_input) -> dict:
-    normalized_user_input = re.sub(" +", " ", user_input.strip())
-    match_command = re.search(r'(?i)\b{}\b'.format(
-        "|".join(OPERATIONS)), normalized_user_input)
-    input_list = [match_command.group()]
-    params = normalized_user_input[match_command.end()+1::].split(' ')
-    keys = ('command', 'name', 'phone')
-    input_list.extend(params)
-    # print(input_list)
-    return {x: y for x, y in zip(keys, input_list)}
+    if user_input:
+        normalized_user_input = re.sub(" +", " ", user_input.strip())
+        match_command = re.search(r'(?i)\b{}\b'.format(
+            r"\b|\b".join(OPERATIONS)), normalized_user_input)
+        if match_command:
+            keys = ('command', 'name', 'phone')
+            input_list = [match_command.group()]
+            if len(user_input) != match_command.end():
+                params = normalized_user_input[match_command.end(
+                )+1::].split(' ')
+                input_list.extend(params)
+            return {x: y for x, y in zip(keys, input_list)}
+    return {'command': 'empty'}
 
 
 @input_error
 def handler(**kwargs):
-    return OPERATIONS[kwargs['command']](**kwargs)
+    params = kwargs
+    command = params.pop('command')
+    if params:
+        return OPERATIONS.get(command, empty_input)(**params)
+    else:
+        return OPERATIONS.get(command, empty_input)()
 
 
 def read_contact_list():
@@ -133,12 +149,3 @@ def write_contact_list():
 
 if __name__ == "__main__":
     main()
-
-
-# i_list = ['add', 'Name']
-# comand, *name, phone = i_list
-# print(comand, name, phone)
-# b = " ".join(name)
-# print(comand, b, phone)
-# # a = {x: y for x, y in (comand, b, phone)}
-# # print(a)
