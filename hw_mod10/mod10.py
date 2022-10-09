@@ -4,51 +4,50 @@ import pickle
 
 
 class AddressBook(UserDict):
-    def add_record(self, **kwargs):
-        name = kwargs['name']
-        if name not in self.data:
-            record = Record(**kwargs)
+    def add_record(self, name, phone=None, **kwargs):
+        if phone and name not in self.data:
+            record = Record(name=name, phone=phone)
             self.data[record.name.value] = record
             return f'Phone {record.phones[0].value} was added for {record.name.value}'
+        elif not phone and name not in self.data:
+            record = Record(name=name)
+            self.data[record.name.value] = record
+            return f'Contact {record.name.value} was added without phone, since it was not enterred.'
         else:
             raise ValueError(
                 f"User with name {name} is already in the Address book. Please enter another name.")
 
-    def edit_record(self, **kwargs):
-        name = kwargs['name']
+    def edit_record(self, command, name, phone=None, new_phone=None, ** kwargs):
         if name in self.data:
-            command = kwargs['command']
             if command == 'add phone':
-                return self.data[name].add_phone(**kwargs)
+                return self.data[name].add_phone(name=name, phone=phone)
             elif command == 'remove phone':
-                return self.data[name].remove_phone(**kwargs)
+                return self.data[name].remove_phone(name=name, phone=phone)
             elif command == 'change phone':
-                return self.data[name].change_phone(**kwargs)
+                return self.data[name].change_phone(name=name, phone=phone, new_phone=new_phone)
         else:
             raise ValueError(
                 f"User with name {name} was not found in the Address book. Please enter another name.")
 
 
 class Record:
-    def __init__(self, **kwargs):
-        name = kwargs['name']
+    def __init__(self, name, phone=None, **kwargs):
         self.phones = []
-        self.name = Name(name)
-        self.add_phone(**kwargs)
+        self.name = Name(name=name)
+        if phone:
+            self.add_phone(name=name, phone=phone)
 
-    def add_phone(self, **kwargs):
-        name = kwargs['name']
-        phone = kwargs['phone']
-        if phone not in [phone.value for phone in self.phones]:
-            self.phones.append(Phone(phone))
+    def add_phone(self, name, phone=None, **kwargs):
+        if phone and phone not in [phone.value for phone in self.phones]:
+            self.phones.append(Phone(phone=phone))
             return f'Phone {phone} was added for {name}'
+        if not phone:
+            return f'Phone was not added since it was not enterred.'
         else:
             raise ValueError(
                 f"User with name {name} already has enterred number {phone}.")
 
-    def remove_phone(self, **kwargs):
-        name = kwargs['name']
-        phone = kwargs['phone']
+    def remove_phone(self, name, phone=None, **kwargs):
         for phone_object in self.phones:
             if phone_object.value == phone:
                 self.phones.remove(phone_object)
@@ -57,13 +56,11 @@ class Record:
             raise ValueError(
                 f"User with name {name} doesn't have number {phone}.")
 
-    def change_phone(self, **kwargs):
-        name = kwargs['name']
-        phone = kwargs['phone']
-        new_phone = kwargs['new_phone']
-        self.remove_phone(**kwargs)
-        self.add_phone(name=name, phone=new_phone)
-        return f'Phone {phone} was replaced by {new_phone} for {name} contact'
+    def change_phone(self, name, phone=None, new_phone=None, **kwargs):
+        a = self.remove_phone(name=name, phone=phone)
+        b = self.add_phone(name=name, phone=new_phone)
+        return a, b
+        # return f'Phone {phone} was replaced by {new_phone} for {name} contact'
 
 
 class Field:
@@ -103,15 +100,16 @@ def greetings(**kwargs):
 @input_error
 def show_phone(**kwargs):
     name = kwargs['name']
-    if contact_list.get(name):
-        return f"{name} has {contact_list[name]} phone number"
+    if name in contact_list:
+        # if contact_list.get(name):
+        return f"{name} has {' '.join(phone.value for phone in contact_list[name].phones)} phone number/s"
     else:
         raise ValueError("Such conatact is absent in the contact list")
 
 
 @input_error
 def show_contact_list(**kwargs):
-    return '\n'.join([f'{name} {" ".join(phone.value for phone in record.phones)}' for name, record in sorted(contact_list.items())])
+    return '\n'.join([f'{name} {", ".join(phone.value for phone in record.phones)}' for name, record in sorted(contact_list.items())])
 
 
 @input_error
@@ -140,17 +138,21 @@ OPERATIONS = {
 
 
 def main():
-    read_contact_list()
+    # read_contact_list()
     while True:
         result = handler(
             **input_parser(
                 input("Please enter a command with parameters: ")
             )
         )
-        print(result)
+        if isinstance(result, str):
+            print(result)
+        else:
+            for i in result:
+                print(i)
         # print(contact_list)
         if result == "Good bye!":
-            write_contact_list()
+            # write_contact_list()
             break
 
 
@@ -175,7 +177,7 @@ def input_parser(user_input) -> dict:
 def handler(**kwargs):
     params = kwargs
     command = params.get('command')
-    if params.get('command') and len(params) > 1:
+    if 'command' in params and len(params) > 1:
         return OPERATIONS.get(command, empty_input)(**params)
     else:
         return OPERATIONS.get(command, empty_input)()
