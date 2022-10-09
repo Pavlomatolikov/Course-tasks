@@ -123,6 +123,8 @@ def empty_input(**kwargs):
 
 
 contact_list = AddressBook()
+
+
 OPERATIONS = {
     'hello': greetings,
     'add contact': contact_list.add_record,
@@ -138,7 +140,7 @@ OPERATIONS = {
 
 
 def main():
-    # read_contact_list()
+    read_contact_list()
     while True:
         result = handler(
             **input_parser(
@@ -152,7 +154,7 @@ def main():
                 print(i)
         # print(contact_list)
         if result == "Good bye!":
-            # write_contact_list()
+            write_contact_list()
             break
 
 
@@ -188,8 +190,7 @@ def read_contact_list():
     try:
         with open('contact_list.data', 'rb') as filehandle:
             # read the data as binary data stream
-            contact_list = pickle.load(filehandle)
-            filehandle.close()
+            contact_list.update(pickle.load(filehandle))
     except (FileNotFoundError, EOFError):
         file = open('contact_list.data', 'wb')
         file.close()
